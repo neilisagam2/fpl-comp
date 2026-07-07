@@ -357,14 +357,14 @@ function renderControls() {
     </div>
 
     <div class="control-group">
-      <div class="control-label"><span>Budget allocation</span></div>
+      <div class="control-label"><span>Budget allocation</span><span class="value" id="alloc-total">Total: 100%</span></div>
       ${['GKP', 'DEF', 'MID', 'FWD'].map(pos => `
         <div class="alloc-row">
           <label>${pos}</label>
           <input type="range" id="alloc-${pos}" min="5" max="60" value="${state.allocation[pos]}">
           <span class="value" id="alloc-${pos}-val">${state.allocation[pos]}%</span>
         </div>`).join('')}
-      <div class="control-hint">Rough spend guide per position (normalised automatically). Doesn't have to sum to 100.</div>
+      <div class="control-hint">Independent spend guides per position, not slices of one pie - they don't need to sum to 100. The total above is just for reference.</div>
     </div>
 
     <div class="control-group">
@@ -394,11 +394,20 @@ function renderControls() {
     document.getElementById(`alloc-${pos}`).addEventListener('input', e => {
       state.allocation[pos] = parseInt(e.target.value, 10);
       document.getElementById(`alloc-${pos}-val`).textContent = `${state.allocation[pos]}%`;
+      updateAllocTotal();
     });
   });
 
   document.getElementById('build-btn').addEventListener('click', onBuildClick);
   updateFormationSummary();
+  updateAllocTotal();
+}
+
+function updateAllocTotal() {
+  const total = Object.values(state.allocation).reduce((s, v) => s + v, 0);
+  const el = document.getElementById('alloc-total');
+  el.textContent = `Total: ${total}%`;
+  el.style.color = total === 100 ? 'var(--signal)' : 'var(--text-muted)';
 }
 
 function updateFormationSummary() {
