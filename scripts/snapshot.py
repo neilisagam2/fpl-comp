@@ -4,11 +4,18 @@ FPL Companion - Stage 0: Daily Snapshot Job
 ============================================
 Fetches core FPL API data and stores it in the repo:
 
-  data/latest/bootstrap.json   - full bootstrap-static (overwritten daily)
-  data/latest/fixtures.json    - full fixtures list   (overwritten daily)
+  data/latest/bootstrap.json     - full bootstrap-static (overwritten daily)
+  data/latest/fixtures.json      - full fixtures list   (overwritten daily)
   data/snapshots/YYYY-MM-DD.json - slim per-player daily snapshot
                                    (price, ownership, form, status...)
                                    kept forever -> powers price/trend history
+  data/baseline/season-2025-26.json
+                                 - full end-of-season player stats, written
+                                   only while the API still serves the
+                                   finished 2025/26 season. Freezes itself
+                                   automatically when the game resets for
+                                   the new season. Keyed by permanent player
+                                   `code` (ids change between seasons).
 
 Designed to run on a GitHub Actions cron schedule. Idempotent: re-running
 on the same day simply overwrites that day's snapshot.
@@ -29,6 +36,8 @@ FIXTURES_URL = "https://fantasy.premierleague.com/api/fixtures/"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LATEST_DIR = REPO_ROOT / "data" / "latest"
 SNAPSHOTS_DIR = REPO_ROOT / "data" / "snapshots"
+BASELINE_DIR = REPO_ROOT / "data" / "baseline"
+BASELINE_FILE = BASELINE_DIR / "season-2025-26.json"
 
 # Per-player fields kept in the slim daily snapshot.
 # These are the fields whose *history over time* is valuable
@@ -62,6 +71,38 @@ SNAPSHOT_PLAYER_FIELDS = [
     "clean_sheets",
     "saves",
     "bonus",
+]
+
+# Per-player fields kept in the season baseline (everything the Signal
+# engine's Performance / Reliability / Team Strength formulas need).
+BASELINE_PLAYER_FIELDS = [
+    "code",                        # permanent across seasons - the join key
+    "id",                          # last season's id, for reference only
+    "web_name",
+    "first_name",
+    "second_name",
+    "team",
+    "element_type",
+    "now_cost",
+    "total_points",
+    "minutes",
+    "starts",
+    "goals_scored",
+    "assists",
+    "clean_sheets",
+    "goals_conceded",
+    "saves",
+    "bonus",
+    "bps",
+    "yellow_cards",
+    "red_cards",
+    "expected_goals",
+    "expected_assists",
+    "expected_goal_involvements",
+    "expected_goals_conceded",
+    "defensive_contribution",
+    "ict_index",
+    "selected_by_percent",
 ]
 
 HEADERS = {
@@ -114,6 +155,45 @@ def build_slim_snapshot(bootstrap: dict) -> dict:
     }
 
 
+# === SEASON BASELINE ===
+def is_finished_season(bootstrap: dict) -> bool:
+    """True while the API is still serving a fully completed season
+    (every gameweek finished). Becomes False the moment FPL relaunches
+    the game for the new season, which freezes the baseline file."""
+    events = bootstrap.get("events", [])
+    return bool(events) and all(e.get("finished") for e in events)
+
+
+def build_baseline(bootstrap: dict) -> dict:
+    """Full-season per-player stats + team-level stats, keyed by permanent
+    player `code`. This is the 'last season' layer of the Signal engine."""
+    players = []
+    for p in bootstrap.get("elements", []):
+        players.append({field: p.get(field) for field in BASELINE_PLAYER_FIELDS})
+
+    # Team reference: names + FPL strength metrics (team ids also change
+    # between seasons, so store names/codes alongside)
+    teams = []
+    for t in bootstrap.get("teams", []):
+        teams.append({
+            "id": t.get("id"),
+            "code": t.get("code"),
+            "name": t.get("name"),
+            "short_name": t.get("short_name"),
+            "strength_attack_home": t.get("strength_attack_home"),
+            "strength_attack_away": t.get("strength_attack_away"),
+            "strength_defence_home": t.get("strength_defence_home"),
+            "strength_defence_away": t.get("strength_defence_away"),
+        })
+
+    return {
+        "season": "2025-26",
+        "captured_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "players": players,
+        "teams": teams,
+    }
+
+
 # === WRITE ===
 def write_json(path: Path, data: dict | list, compact: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -160,6 +240,20 @@ def main() -> None:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     slim = build_slim_snapshot(bootstrap)
     write_json(SNAPSHOTS_DIR / f"{today}.json", slim, compact=True)
+
+    # 3. Season baseline: keep refreshing while the finished 2025/26 season
+    #    is still being served; freeze (never touch again) once the game
+    #    resets for the new season.
+    if is_finished_season(bootstrap):
+        baseline = build_baseline(bootstrap)
+        write_json(BASELINE_FILE, baseline, compact=True)
+        print("Season still in finished 2025/26 state -> baseline refreshed.")
+    else:
+        if BASELINE_FILE.exists():
+            print("New season detected -> baseline frozen, not overwritten.")
+        else:
+            print("WARNING: new season live but no baseline file exists. "
+                  "Signal engine will need history_past fallback.")
 
     print("Snapshot complete.")
 
