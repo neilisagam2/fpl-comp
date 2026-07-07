@@ -32,6 +32,9 @@ jobs:
       - name: Run snapshot script
         run: python scripts/snapshot.py
 
+      - name: Run signal engine
+        run: python scripts/signals.py
+
       - name: Commit and push snapshot
         run: |
           git config user.name "fpl-snapshot-bot"
