@@ -461,6 +461,16 @@ def main() -> None:
         print("WARNING: no baseline file - all last-season data unavailable.")
 
     teams_short = {t["id"]: t.get("short_name", "?") for t in bootstrap["teams"]}
+    teams_code = {t["id"]: t.get("code") for t in bootstrap["teams"]}
+    teams_ref = [
+        {
+            "id": t["id"],
+            "code": t.get("code"),   # for crest URL: badges/70/t{code}.png
+            "name": t.get("name"),
+            "short_name": t.get("short_name"),
+        }
+        for t in bootstrap["teams"]
+    ]
 
     # --- Build player records ---
     players = []
@@ -486,10 +496,13 @@ def main() -> None:
 
         players.append({
             "id": raw["id"],
-            "code": raw.get("code"),
+            "code": raw.get("code"),          # photo URL: p{code}.png
             "web_name": raw.get("web_name", "?"),
+            "first_name": raw.get("first_name", ""),
+            "second_name": raw.get("second_name", ""),
             "team": raw.get("team"),
             "team_short": teams_short.get(raw.get("team"), "?"),
+            "team_code": teams_code.get(raw.get("team")),
             "element_type": raw.get("element_type"),
             "position": POSITION_MAP.get(raw.get("element_type"), "?"),
             "now_cost": raw.get("now_cost", 0),
@@ -533,7 +546,9 @@ def main() -> None:
         p["signal_if_fit"] = round(base * p["fixture_mult"], 2)  # ignores availability
         p["value_signal"] = round(p["signal"] / p["price"], 2) if p["price"] else 0.0
         p["why"] = build_why(p, p["position"])
-        del p["stats"]  # raw stats not needed downstream; keeps file small
+        # internal-only fields not needed by the frontend
+        for internal_field in ("stats", "metrics", "shrinkage_weight"):
+            p.pop(internal_field, None)
 
     players.sort(key=lambda p: p["signal"], reverse=True)
 
@@ -551,6 +566,7 @@ def main() -> None:
                 "unproven_cap_pct": UNPROVEN_PERFORMANCE_CAP,
             },
         },
+        "teams": teams_ref,
         "players": players,
     }
 
