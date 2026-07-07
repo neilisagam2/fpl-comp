@@ -48,10 +48,17 @@ function setStatus(msg, isError = false) {
 }
 
 // ---------- Scoring (risk-blended pick score) ----------
+// Ownership acts as a gentle multiplicative nudge (K controls strength),
+// never a wholesale replacement of quality - so a clearly elite, high-owned
+// player (e.g. Haaland) still outranks a low-owned bench forward at any
+// risk setting, while genuinely comparable players do reshuffle toward
+// differentials as risk rises.
+const OWNERSHIP_NUDGE_STRENGTH = 0.18;
+
 function pickScore(p, riskFrac) {
-  const ownership = parseFloat(p.selected_by_percent) || 0;
-  const differential = 0.5 * p.signal + 0.5 * (100 - Math.min(ownership, 100));
-  return (1 - riskFrac) * p.signal + riskFrac * differential;
+  const ownership = Math.min(parseFloat(p.selected_by_percent) || 0, 100);
+  const ownershipBoost = Math.max(-1, Math.min(1, (50 - ownership) / 50));
+  return p.signal * (1 + riskFrac * OWNERSHIP_NUDGE_STRENGTH * ownershipBoost);
 }
 
 // ---------- Optimizer: greedy fill + swap improvement ----------
@@ -98,7 +105,7 @@ function buildSquad() {
     for (const p of candidates) {
       if (picked.length >= quota) break;
       if (!canAdd(p, squad.concat(picked))) continue;
-      if (spent + p.price <= posBudget[pos] || picked.length < quota - remainingCheapSlots(candidates, picked, quota)) {
+      if (spent + p.price <= posBudget[pos]) {
         picked.push(p);
         spent += p.price;
         clubCount[p.team] = (clubCount[p.team] || 0) + 1;
@@ -117,21 +124,31 @@ function buildSquad() {
     squad = squad.concat(picked);
   }
 
-  // If over budget overall, swap down: replace the worst value-for-money
-  // pick with a cheaper same-position alternative, repeat.
+  // Over-budget correction: cut whichever swap causes the SMALLEST score
+  // loss for the budget freed - not whoever has the worst raw score/price
+  // ratio (that would always target premiums like Haaland first, since
+  // expensive elite players naturally have a "worse" points-per-pound
+  // ratio than cheap squad players despite being clearly better overall).
   let guard = 0;
   while (totalCost(squad) > BUDGET_TOTAL && guard < 200) {
     guard++;
-    squad.sort((a, b) => (a._score / a.price) - (b._score / b.price)); // worst value first
-    const worst = squad[0];
-    const altPool = byPos[worst.position]
-      .filter(p => p.price < worst.price && canAdd(p, squad.filter(x => x.id !== worst.id)));
-    if (altPool.length === 0) { squad.shift(); continue; } // can't fix this slot, drop and retry loop shape
-    const replacement = altPool[0]; // cheapest-but-best already sorted by score desc then filtered
-    clubCount[worst.team]--;
-    squad = squad.filter(x => x.id !== worst.id);
-    squad.push(replacement);
-    clubCount[replacement.team] = (clubCount[replacement.team] || 0) + 1;
+    let bestCut = null; // { index, replacement, scoreLoss, oldTeam }
+    for (let i = 0; i < squad.length; i++) {
+      const current = squad[i];
+      const altPool = byPos[current.position]
+        .filter(p => p.price < current.price && canAdd(p, squad.filter(x => x.id !== current.id)))
+        .sort((a, b) => b._score - a._score); // best-scoring cheaper alternative first
+      if (altPool.length === 0) continue;
+      const alt = altPool[0];
+      const scoreLoss = current._score - alt._score;
+      if (!bestCut || scoreLoss < bestCut.scoreLoss) {
+        bestCut = { index: i, replacement: alt, scoreLoss, oldTeam: current.team };
+      }
+    }
+    if (!bestCut) { squad.shift(); continue; } // no valid cut anywhere - fallback
+    clubCount[bestCut.oldTeam]--;
+    squad[bestCut.index] = bestCut.replacement;
+    clubCount[bestCut.replacement.team] = (clubCount[bestCut.replacement.team] || 0) + 1;
   }
 
   // Improvement pass: try upgrading each player to a better-scoring
@@ -152,13 +169,36 @@ function buildSquad() {
     }
   }
 
-  return squad;
-}
+  // Spend-remaining-budget pass: convert idle leftover cash into an
+  // equal-or-better alternative, preferring the priciest option available
+  // so the squad ends close to the full £100m rather than leaving money
+  // unused for no reason.
+  let spendGuard = 0;
+  let spentImproved = true;
+  while (spentImproved && spendGuard < 100) {
+    spentImproved = false;
+    spendGuard++;
+    const spare = BUDGET_TOTAL - totalCost(squad);
+    if (spare < 0.1) break;
+    for (let i = 0; i < squad.length; i++) {
+      const current = squad[i];
+      const maxAffordable = current.price + spare;
+      const candidates = byPos[current.position]
+        .filter(p => p.price <= maxAffordable + 0.001 && p._score >= current._score && p.price > current.price)
+        .filter(p => canAdd(p, squad.filter(x => x.id !== current.id)));
+      if (candidates.length > 0) {
+        candidates.sort((a, b) => b.price - a.price || b._score - a._score);
+        const best = candidates[0];
+        clubCount[current.team]--;
+        squad[i] = best;
+        clubCount[best.team] = (clubCount[best.team] || 0) + 1;
+        spentImproved = true;
+        break;
+      }
+    }
+  }
 
-function remainingCheapSlots(candidates, picked, quota) {
-  // Small helper used during greedy fill to avoid over-committing budget
-  // to early expensive picks when cheap depth exists later in the list.
-  return 0;
+  return squad;
 }
 
 // ---------- Starting XI selection from the 15 ----------
