@@ -19,7 +19,7 @@ let META = null;
 const state = {
   formation: { DEF: 4, MID: 4, FWD: 2 }, // GKP fixed at 1 starting / 2 squad
   risk: 30,          // 0 = safe, 100 = differential-heavy
-  allocation: { GKP: 8, DEF: 25, MID: 40, FWD: 27 }, // % of budget, sums to 100
+  allocation: { GKP: 8, DEF: 25, MID: 40, FWD: 27 }, // relative weights, auto-normalised
   squad: null,        // last built squad result
 };
 
@@ -75,10 +75,13 @@ function buildSquad() {
     FWD: pool.filter(p => p.position === 'FWD').sort((a, b) => b._score - a._score),
   };
 
-  // Soft per-position budget pots, scaled from the allocation sliders
+  // Allocation sliders are relative WEIGHTS, not fixed percentages - they're
+  // normalised here so the effective split always sums to 100%, however the
+  // sliders happen to be set (e.g. all four at max still splits evenly).
+  const allocSum = Object.values(state.allocation).reduce((s, v) => s + v, 0) || 1;
   const posBudget = {};
   for (const pos of Object.keys(SQUAD_QUOTAS)) {
-    posBudget[pos] = BUDGET_TOTAL * (state.allocation[pos] / 100);
+    posBudget[pos] = BUDGET_TOTAL * (state.allocation[pos] / allocSum);
   }
 
   let squad = [];
@@ -357,14 +360,14 @@ function renderControls() {
     </div>
 
     <div class="control-group">
-      <div class="control-label"><span>Budget allocation</span><span class="value" id="alloc-total">Total: 100%</span></div>
+      <div class="control-label"><span>Budget allocation</span><span class="value" id="alloc-total">Effective split shown</span></div>
       ${['GKP', 'DEF', 'MID', 'FWD'].map(pos => `
         <div class="alloc-row">
           <label>${pos}</label>
           <input type="range" id="alloc-${pos}" min="5" max="60" value="${state.allocation[pos]}">
           <span class="value" id="alloc-${pos}-val">${state.allocation[pos]}%</span>
         </div>`).join('')}
-      <div class="control-hint">Independent spend guides per position, not slices of one pie - they don't need to sum to 100. The total above is just for reference.</div>
+      <div class="control-hint">Relative spend weights per position - automatically normalised to a 100% split, whatever values you set.</div>
     </div>
 
     <div class="control-group">
@@ -393,7 +396,6 @@ function renderControls() {
   ['GKP', 'DEF', 'MID', 'FWD'].forEach(pos => {
     document.getElementById(`alloc-${pos}`).addEventListener('input', e => {
       state.allocation[pos] = parseInt(e.target.value, 10);
-      document.getElementById(`alloc-${pos}-val`).textContent = `${state.allocation[pos]}%`;
       updateAllocTotal();
     });
   });
@@ -404,10 +406,12 @@ function renderControls() {
 }
 
 function updateAllocTotal() {
-  const total = Object.values(state.allocation).reduce((s, v) => s + v, 0);
-  const el = document.getElementById('alloc-total');
-  el.textContent = `Total: ${total}%`;
-  el.style.color = total === 100 ? 'var(--signal)' : 'var(--text-muted)';
+  const sum = Object.values(state.allocation).reduce((s, v) => s + v, 0) || 1;
+  ['GKP', 'DEF', 'MID', 'FWD'].forEach(pos => {
+    const effectivePct = Math.round((state.allocation[pos] / sum) * 100);
+    document.getElementById(`alloc-${pos}-val`).textContent = `${effectivePct}%`;
+  });
+  document.getElementById('alloc-total').textContent = 'Effective split shown';
 }
 
 function updateFormationSummary() {
