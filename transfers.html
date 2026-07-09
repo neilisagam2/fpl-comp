@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FPL Companion — Transfers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark">SQUAD<span>SIGNAL</span></div>
+      <div class="brand-sub">FPL Companion</div>
+    </div>
+    <nav class="top-nav">
+      <a href="index.html">Squad Builder</a>
+      <a href="my-team.html">My Team</a>
+      <a href="stats.html">Stats Explorer</a>
+      <a href="captain.html">Captaincy</a>
+      <a href="transfers.html" class="active">Transfers</a>
+    </nav>
+    <div class="meta-pill" id="meta-pill">Loading data…</div>
+  </header>
+
+  <main class="myteam-panel" id="transfers-panel">
+    <div class="team-id-card" id="team-id-card">
+      <div class="team-id-title">Enter your FPL Team ID</div>
+      <div class="team-id-hint">
+        Same ID as the other pages - if you've used them already, yours should be filled in below.
+      </div>
+      <div class="team-id-row">
+        <input type="text" id="team-id-input" placeholder="e.g. 124780" inputmode="numeric">
+        <button id="team-id-submit">Analyze transfers</button>
+      </div>
+      <div class="status-line" id="transfers-status"></div>
+    </div>
+
+    <div id="transfers-content"></div>
+  </main>
+
+  <script src="transfers.js"></script>
+</body>
+</html>
