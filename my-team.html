@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FPL Companion — My Team</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark">SQUAD<span>SIGNAL</span></div>
+      <div class="brand-sub">FPL Companion</div>
+    </div>
+    <nav class="top-nav">
+      <a href="index.html">Squad Builder</a>
+      <a href="my-team.html" class="active">My Team</a>
+    </nav>
+    <div class="meta-pill" id="meta-pill">Loading data…</div>
+  </header>
+
+  <main class="myteam-panel" id="myteam-panel">
+    <div class="team-id-card" id="team-id-card">
+      <div class="team-id-title">Enter your FPL Team ID</div>
+      <div class="team-id-hint">
+        Find it in the URL when viewing your team on the official site or app,
+        e.g. fantasy.premierleague.com/entry/<strong>1234567</strong>/...
+      </div>
+      <div class="team-id-row">
+        <input type="text" id="team-id-input" placeholder="e.g. 124780" inputmode="numeric">
+        <button id="team-id-submit">Load my team</button>
+      </div>
+      <div class="status-line" id="myteam-status"></div>
+    </div>
+
+    <div id="myteam-content"></div>
+  </main>
+
+  <script src="my-team.js"></script>
+</body>
+</html>
