@@ -1015,3 +1015,124 @@ input[type="range"]::-moz-range-thumb {
   color: var(--signal);
   flex-shrink: 0;
 }
+/* ---------- Transfer Recommendations ---------- */
+.transfer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.transfer-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 16px;
+  position: relative;
+}
+
+.transfer-tier {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 10px;
+  border-radius: 100px;
+  margin-bottom: 12px;
+}
+
+.transfer-tier.good { background: rgba(76, 154, 106, 0.15); color: var(--good); }
+.transfer-tier.signal { background: rgba(232, 163, 61, 0.15); color: var(--signal); }
+.transfer-tier.tough { background: rgba(196, 84, 74, 0.15); color: var(--tough); }
+
+.transfer-swap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.transfer-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.transfer-arrow {
+  color: var(--text-faint);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.transfer-name { font-size: 13px; font-weight: 600; }
+.transfer-meta { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+
+.transfer-delta {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--good);
+}
+
+.simulator-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.sim-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sim-row label {
+  width: 50px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.sim-row select {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--card-border);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.sim-result {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.sim-stat {
+  background: var(--bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.sim-stat .label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.sim-stat .figure {
+  font-family: var(--font-display);
+  font-size: 20px;
+}
