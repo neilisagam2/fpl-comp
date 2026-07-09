@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FPL Companion — Stats Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark">SQUAD<span>SIGNAL</span></div>
+      <div class="brand-sub">FPL Companion</div>
+    </div>
+    <nav class="top-nav">
+      <a href="index.html">Squad Builder</a>
+      <a href="my-team.html">My Team</a>
+      <a href="stats.html" class="active">Stats Explorer</a>
+    </nav>
+    <div class="meta-pill" id="meta-pill">Loading data…</div>
+  </header>
+
+  <div class="explorer-body">
+    <aside class="filters-panel" id="filters-panel">
+      <div class="empty-state">Loading filters…</div>
+    </aside>
+
+    <main class="explorer-main">
+      <div class="explorer-toolbar" id="explorer-toolbar"></div>
+      <div class="table-wrap">
+        <table class="squad-table" id="explorer-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="compare-bar" id="compare-bar"></div>
+    </main>
+  </div>
+
+  <script src="stats.js"></script>
+</body>
+</html>
