@@ -6,7 +6,7 @@
 
 // ACTION REQUIRED: replace with your deployed Cloudflare Worker URL,
 // e.g. 'https://fpl-proxy.yourname.workers.dev'
-const WORKER_BASE = 'https://fpl-proxy.neilstuart87.workers.dev/';
+const WORKER_BASE = 'https://fpl-proxy.YOUR-SUBDOMAIN.workers.dev';
 
 const STORAGE_KEY = 'fplCompanionTeamId';
 const SIGNALS_URL = 'data/latest/signals.json';
@@ -58,7 +58,8 @@ function setStatus(msg, isError = false) {
 }
 
 async function fetchProxied(path) {
-  const res = await fetch(WORKER_BASE + path);
+  const base = WORKER_BASE.replace(/\/+$/, ''); // strip any trailing slash(es), avoids double-slash paths
+  const res = await fetch(base + path);
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`HTTP ${res.status} for ${path}${body ? ' - ' + body.slice(0, 150) : ''}`);
