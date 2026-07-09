@@ -546,6 +546,25 @@ def main() -> None:
         p["signal_if_fit"] = round(base * p["fixture_mult"], 2)  # ignores availability
         p["value_signal"] = round(p["signal"] / p["price"], 2) if p["price"] else 0.0
         p["why"] = build_why(p, p["position"])
+
+        # Keep a slim set of raw counting stats for display (Stats Explorer
+        # etc.) - these are blended per the season-weighting rules same as
+        # everything else, so they reflect current-season form once GWs
+        # have been played, not just last season's totals.
+        s = p.get("stats")
+        if s:
+            p["raw"] = {
+                "total_points": round(s["total_points"], 1),
+                "minutes": round(s["minutes"]),
+                "goals": round(s["goals_scored"], 1),
+                "assists": round(s["assists"], 1),
+                "clean_sheets": round(s["clean_sheets"], 1),
+                "saves": round(s["saves"], 1),
+                "defensive_contribution": round(s["defensive_contribution"], 1),
+            }
+        else:
+            p["raw"] = None
+
         # internal-only fields not needed by the frontend
         for internal_field in ("stats", "metrics", "shrinkage_weight"):
             p.pop(internal_field, None)
