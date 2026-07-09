@@ -4,7 +4,7 @@
 // ============================================================
 
 // ACTION REQUIRED: same Worker URL as my-team.js
-const WORKER_BASE = 'https://fpl-proxy.YOUR-SUBDOMAIN.workers.dev';
+const WORKER_BASE = 'https://fpl-proxy.neilstuart87.workers.dev/';
 
 const STORAGE_KEY = 'fplCompanionTeamId'; // shared with my-team.js on purpose
 const SIGNALS_URL = 'data/latest/signals.json';
