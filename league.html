@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FPL Companion — League HQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark">SQUAD<span>SIGNAL</span></div>
+      <div class="brand-sub">FPL Companion</div>
+    </div>
+    <nav class="top-nav">
+      <a href="index.html">Squad Builder</a>
+      <a href="my-team.html">My Team</a>
+      <a href="stats.html">Stats Explorer</a>
+      <a href="captain.html">Captaincy</a>
+      <a href="transfers.html">Transfers</a>
+      <a href="league.html" class="active">League HQ</a>
+    </nav>
+    <div class="meta-pill" id="meta-pill">Loading data…</div>
+  </header>
+
+  <main class="myteam-panel" id="league-panel" style="max-width:1100px">
+    <div class="team-id-card" id="league-id-card">
+      <div class="team-id-title">Enter your mini-league ID</div>
+      <div class="team-id-hint">
+        Find it in the URL when viewing your league standings on the official site,
+        e.g. fantasy.premierleague.com/leagues/<strong>875903</strong>/standings/c
+      </div>
+      <div class="team-id-row">
+        <input type="text" id="league-id-input" placeholder="e.g. 875903" inputmode="numeric">
+        <button id="league-id-submit">Load league</button>
+      </div>
+      <div class="status-line" id="league-status"></div>
+    </div>
+
+    <div id="league-content"></div>
+  </main>
+
+  <script src="league.js"></script>
+</body>
+</html>
