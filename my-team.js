@@ -6,7 +6,7 @@
 
 // ACTION REQUIRED: replace with your deployed Cloudflare Worker URL,
 // e.g. 'https://fpl-proxy.yourname.workers.dev'
-const WORKER_BASE = 'https://fpl-proxy.YOUR-SUBDOMAIN.workers.dev';
+const WORKER_BASE = 'https://fpl-proxy.neilstuart87.workers.dev/';
 
 const STORAGE_KEY = 'fplCompanionTeamId';
 const SIGNALS_URL = 'data/latest/signals.json';
