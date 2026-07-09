@@ -204,7 +204,7 @@ function renderTable() {
   });
 
   const tbody = document.querySelector('#explorer-table tbody');
-  tbody.innerHTML = sorted.slice(0, 200).map(p => {
+  let rowsHTML = sorted.slice(0, 200).map(p => {
     const r = p.raw || {};
     const rowClasses = [
       p.availability_mult === 0 ? 'unavailable-row' : '',
@@ -228,15 +228,22 @@ function renderTable() {
     </tr>`;
   }).join('');
 
-  tbody.querySelectorAll('.compare-check').forEach(cb => {
-    cb.addEventListener('change', () => toggleCompare(parseInt(cb.dataset.id, 10), cb));
-  });
-
+  // Build the whole tbody HTML - including the truncation notice - as ONE
+  // string and set it ONCE. Using `innerHTML +=` here would re-serialise
+  // and recreate every row (including ones that just got listeners
+  // attached below), silently destroying those listeners. That's exactly
+  // why compare checkboxes stopped working for any position with over 200
+  // players (MID, DEF) but worked fine for smaller pools (GKP, FWD).
   if (sorted.length > 200) {
-    tbody.innerHTML += `<tr><td colspan="${COLUMNS.length}" style="text-align:center;color:var(--text-faint);font-family:var(--font-mono);font-size:11px">
+    rowsHTML += `<tr><td colspan="${COLUMNS.length}" style="text-align:center;color:var(--text-faint);font-family:var(--font-mono);font-size:11px">
       Showing top 200 of ${sorted.length} - narrow your filters to see more precisely
     </td></tr>`;
   }
+  tbody.innerHTML = rowsHTML;
+
+  tbody.querySelectorAll('.compare-check').forEach(cb => {
+    cb.addEventListener('change', () => toggleCompare(parseInt(cb.dataset.id, 10), cb));
+  });
 }
 
 function signalColor(signal) {
