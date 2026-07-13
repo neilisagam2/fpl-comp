@@ -9,7 +9,7 @@ const BUDGET_TOTAL = 100.0;
 const SQUAD_QUOTAS = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
 const MAX_PER_CLUB = 3;
 
-const PHOTO_URL = code => `https://resources.premierleague.com/premierleague/photos/players/110x140/p${code}.png`;
+const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/250x250/${code}.png`;
 const CREST_URL = code => `https://resources.premierleague.com/premierleague/badges/50/t${code}.png`;
 
 let ALL_PLAYERS = [];
@@ -252,7 +252,7 @@ function playerCardHTML(p, { isBench = false, isCaptain = false } = {}) {
       ${p.team_code ? `<img class="crest" src="${CREST_URL(p.team_code)}" alt="${p.team_short}" onerror="this.style.display='none'">` : ''}
       <div class="photo-wrap">
         <img src="${PHOTO_URL(p.code)}" alt="${p.web_name}"
-             onerror="this.onerror=null;this.src='https://resources.premierleague.com/premierleague/photos/players/110x140/Photo-Missing.png'">
+             onerror="this.style.display='none'">
       </div>
       <div class="name">${p.web_name}</div>
       <div class="price">£${p.price.toFixed(1)}m</div>
@@ -314,7 +314,7 @@ function openDrawer(p) {
       <div class="drawer-head">
         <div class="photo-wrap">
           <img src="${PHOTO_URL(p.code)}" alt="${p.web_name}"
-               onerror="this.onerror=null;this.src='https://resources.premierleague.com/premierleague/photos/players/110x140/Photo-Missing.png'">
+               onerror="this.style.display='none'">
         </div>
         <div>
           <div class="drawer-title">${p.web_name}</div>
@@ -430,7 +430,6 @@ function onBuildClick() {
     return;
   }
   setStatus('Building squad...');
-  // Timeout so the status message paints before the (synchronous) build runs
   setTimeout(() => {
     const squad = buildSquad();
     const spent = squad.reduce((s, p) => s + p.price, 0);
