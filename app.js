@@ -9,7 +9,7 @@ const BUDGET_TOTAL = 100.0;
 const SQUAD_QUOTAS = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
 const MAX_PER_CLUB = 3;
 
-const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/250x250/${code}.png`;
+const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/110x140/${code}.png`;
 const CREST_URL = code => `https://resources.premierleague.com/premierleague/badges/50/t${code}.png`;
 
 let ALL_PLAYERS = [];
