@@ -4,7 +4,7 @@
 // ============================================================
 
 const SIGNALS_URL = 'data/latest/signals.json';
-const PHOTO_URL = code => `https://resources.premierleague.com/premierleague/photos/players/110x140/p${code}.png`;
+const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/250x250/${code}.png`;
 
 const COMPARE_COLORS = ['#e8a33d', '#49a7c4', '#c4544a']; // signal, data, tough - matches token palette
 const MAX_COMPARE = 3;
@@ -228,12 +228,6 @@ function renderTable() {
     </tr>`;
   }).join('');
 
-  // Build the whole tbody HTML - including the truncation notice - as ONE
-  // string and set it ONCE. Using `innerHTML +=` here would re-serialise
-  // and recreate every row (including ones that just got listeners
-  // attached below), silently destroying those listeners. That's exactly
-  // why compare checkboxes stopped working for any position with over 200
-  // players (MID, DEF) but worked fine for smaller pools (GKP, FWD).
   if (sorted.length > 200) {
     rowsHTML += `<tr><td colspan="${COLUMNS.length}" style="text-align:center;color:var(--text-faint);font-family:var(--font-mono);font-size:11px">
       Showing top 200 of ${sorted.length} - narrow your filters to see more precisely
