@@ -4,12 +4,11 @@
 // value from personal Team ID since a user may check others' leagues.
 // ============================================================
 
-// ACTION REQUIRED: same Worker URL as the other pages
 const WORKER_BASE = 'https://fpl-proxy.neilstuart87.workers.dev/';
 
 const LEAGUE_STORAGE_KEY = 'fplCompanionLeagueId';
 const SIGNALS_URL = 'data/latest/signals.json';
-const PHOTO_URL = code => `https://resources.premierleague.com/premierleague/photos/players/110x140/p${code}.png`;
+const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/250x250/${code}.png`;
 
 // Cap on how many members we fetch full chip/history data for, so a huge
 // public league (thousands of entries) can't hammer the Worker/FPL API.
