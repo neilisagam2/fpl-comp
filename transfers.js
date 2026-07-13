@@ -5,12 +5,11 @@
 // only transfer made, not a combined multi-transfer plan.
 // ============================================================
 
-// ACTION REQUIRED: same Worker URL as my-team.js / captain.js
 const WORKER_BASE = 'https://fpl-proxy.neilstuart87.workers.dev/';
 
 const STORAGE_KEY = 'fplCompanionTeamId'; // shared across pages on purpose
 const SIGNALS_URL = 'data/latest/signals.json';
-const PHOTO_URL = code => `https://resources.premierleague.com/premierleague/photos/players/110x140/p${code}.png`;
+const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/250x250/${code}.png`;
 
 const MAX_PER_CLUB = 3;
 
