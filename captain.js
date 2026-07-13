@@ -3,12 +3,11 @@
 // Reuses the Team ID + Worker proxy pattern from my-team.js.
 // ============================================================
 
-// ACTION REQUIRED: same Worker URL as my-team.js
 const WORKER_BASE = 'https://fpl-proxy.neilstuart87.workers.dev/';
 
 const STORAGE_KEY = 'fplCompanionTeamId'; // shared with my-team.js on purpose
 const SIGNALS_URL = 'data/latest/signals.json';
-const PHOTO_URL = code => `https://resources.premierleague.com/premierleague/photos/players/110x140/p${code}.png`;
+const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/250x250/${code}.png`;
 
 // Captaincy cares about the SINGLE next fixture, not the general 5-game
 // outlook the main Signal score uses - so this multiplier is steeper
