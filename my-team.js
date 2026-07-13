@@ -9,7 +9,7 @@ const WORKER_BASE = 'https://fpl-proxy.neilstuart87.workers.dev/';
 const STORAGE_KEY = 'fplCompanionTeamId';
 const SIGNALS_URL = 'data/latest/signals.json';
 
-const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/250x250/${code}.png`;
+const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/110x140/${code}.png`;
 const CREST_URL = code => `https://resources.premierleague.com/premierleague/badges/50/t${code}.png`;
 
 let SIGNALS_BY_ID = {};
