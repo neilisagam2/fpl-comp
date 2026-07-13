@@ -4,7 +4,7 @@
 // ============================================================
 
 const SIGNALS_URL = 'data/latest/signals.json';
-const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/250x250/${code}.png`;
+const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/110x140/${code}.png`;
 
 const COMPARE_COLORS = ['#e8a33d', '#49a7c4', '#c4544a']; // signal, data, tough - matches token palette
 const MAX_COMPARE = 3;
