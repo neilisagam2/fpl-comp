@@ -1187,4 +1187,27 @@ html, body {
     padding-left: 14px;
     padding-right: 14px;
   }
+
+  /* Position toggle row (ALL/GKP/DEF/MID/FWD) - these 5 buttons don't fit
+     one line on a phone. They used to overflow off-screen and (before the
+     overflow-x:hidden safety net above) were reachable by scrolling the
+     whole page sideways; now that that's blocked, they need to wrap onto
+     their own two rows instead, or MID/FWD become permanently unreachable. */
+  .pos-toggle-row {
+    flex-wrap: wrap;
+  }
+  .pos-toggle {
+    flex: 1 1 30%;
+    min-width: 58px;
+  }
+
+  /* Explorer toolbar (search + result count) - let the count drop below
+     the search box rather than squeezing both onto one cramped line. */
+  .explorer-toolbar {
+    flex-wrap: wrap;
+  }
+  .result-count {
+    width: 100%;
+    text-align: left;
+  }
 }
