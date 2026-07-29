@@ -4,13 +4,9 @@
 // (same repo, same origin -> plain fetch works on GitHub Pages).
 // ============================================================
 
-const DATA_URL = 'data/latest/signals.json';
 const BUDGET_TOTAL = 100.0;
 const SQUAD_QUOTAS = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
 const MAX_PER_CLUB = 3;
-
-const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/110x140/${code}.png`;
-const CREST_URL = code => `https://resources.premierleague.com/premierleague/badges/50/t${code}.png`;
 
 let ALL_PLAYERS = [];
 let META = null;
@@ -26,9 +22,7 @@ const state = {
 // ---------- Boot ----------
 async function boot() {
   try {
-    const res = await fetch(DATA_URL, { cache: 'no-store' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const data = await loadSignals();
     META = data.meta;
     ALL_PLAYERS = data.players;
     document.getElementById('meta-pill').textContent =

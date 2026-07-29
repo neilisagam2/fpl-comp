@@ -4,15 +4,15 @@
 // value from personal Team ID since a user may check others' leagues.
 // ============================================================
 
-const WORKER_BASE = 'https://fpl-proxy.neilstuart87.workers.dev/';
-
 const LEAGUE_STORAGE_KEY = 'fplCompanionLeagueId';
-const SIGNALS_URL = 'data/latest/signals.json';
-const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/110x140/${code}.png`;
 
 // Cap on how many members we fetch full chip/history data for, so a huge
 // public league (thousands of entries) can't hammer the Worker/FPL API.
 const MAX_CHIP_LOOKUPS = 20;
+// How many of those chip lookups run concurrently - politeness limit for
+// the Worker/FPL API, balanced against not making the user wait for 20
+// fully sequential round-trips.
+const CHIP_LOOKUP_CONCURRENCY = 4;
 
 const CHIP_LABELS = {
   wildcard: 'Wildcard',
@@ -27,10 +27,11 @@ let SIGNALS_BY_ID = {};
 let META = null;
 let LEAGUE_ENTRIES = []; // standings results, enriched with chips once loaded
 
+const setStatus = makeStatusSetter('league-status');
+
 async function boot() {
   try {
-    const res = await fetch(SIGNALS_URL, { cache: 'no-store' });
-    const data = await res.json();
+    const data = await loadSignals();
     META = data.meta;
     ALL_PLAYERS = data.players;
     SIGNALS_BY_ID = Object.fromEntries(data.players.map(p => [p.id, p]));
@@ -41,41 +42,14 @@ async function boot() {
     console.error(err);
   }
 
-  const savedLeagueId = localStorage.getItem(LEAGUE_STORAGE_KEY);
-  if (savedLeagueId) {
-    document.getElementById('league-id-input').value = savedLeagueId;
-    loadLeague(savedLeagueId);
-  }
-
-  document.getElementById('league-id-submit').addEventListener('click', () => {
-    const id = document.getElementById('league-id-input').value.trim();
-    if (!/^\d+$/.test(id)) {
-      setStatus('Please enter a numeric league ID.', true);
-      return;
-    }
-    localStorage.setItem(LEAGUE_STORAGE_KEY, id);
-    loadLeague(id);
+  wireIdInput({
+    inputId: 'league-id-input',
+    submitId: 'league-id-submit',
+    storageKey: LEAGUE_STORAGE_KEY,
+    setStatus,
+    onSubmit: loadLeague,
+    invalidMsg: 'Please enter a numeric league ID.',
   });
-
-  document.getElementById('league-id-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('league-id-submit').click();
-  });
-}
-
-function setStatus(msg, isError = false) {
-  const el = document.getElementById('league-status');
-  el.textContent = msg;
-  el.style.color = isError ? 'var(--tough)' : 'var(--text-faint)';
-}
-
-async function fetchProxied(path) {
-  const base = WORKER_BASE.replace(/\/+$/, '');
-  const res = await fetch(base + path);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`HTTP ${res.status} for ${path}${body ? ' - ' + body.slice(0, 150) : ''}`);
-  }
-  return res.json();
 }
 
 async function loadLeague(leagueId) {
@@ -120,8 +94,8 @@ function renderStandings(league, results) {
       <tr data-entry="${r.entry}">
         <td>${r.rank}</td>
         <td style="color:${arrowColor}">${arrow}</td>
-        <td>${r.entry_name}</td>
-        <td style="color:var(--text-muted)">${r.player_name}</td>
+        <td>${escapeHtml(r.entry_name)}</td>
+        <td style="color:var(--text-muted)">${escapeHtml(r.player_name)}</td>
         <td>${r.event_total}</td>
         <td><strong>${r.total}</strong></td>
         <td id="chips-${r.entry}"><span style="color:var(--text-faint);font-family:var(--font-mono);font-size:10px">…</span></td>
@@ -129,7 +103,7 @@ function renderStandings(league, results) {
   }).join('');
 
   container.innerHTML = `
-    <div class="section-heading">${league ? league.name : 'League'} standings</div>
+    <div class="section-heading">${league ? escapeHtml(league.name) : 'League'} standings</div>
     <div class="table-wrap" style="margin-bottom:30px">
       <table class="squad-table">
         <thead><tr><th>Rank</th><th></th><th>Team</th><th>Manager</th><th>GW pts</th><th>Total</th><th>Chips used</th></tr></thead>
@@ -141,7 +115,7 @@ function renderStandings(league, results) {
     <div class="team-id-card" style="margin-bottom:0">
       <select id="rival-select" style="width:100%;background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px">
         <option value="">Select a manager...</option>
-        ${results.map(r => `<option value="${r.entry}">${r.entry_name} (${r.player_name})</option>`).join('')}
+        ${results.map(r => `<option value="${r.entry}">${escapeHtml(r.entry_name)} (${escapeHtml(r.player_name)})</option>`).join('')}
       </select>
     </div>
     <div id="rival-squad-content"></div>`;
@@ -153,22 +127,34 @@ function renderStandings(league, results) {
 }
 
 // ---------- Chip tracker (background-loaded) ----------
+async function loadOneChipCell(r) {
+  try {
+    const history = await fetchProxied(`/entry/${r.entry}/history/`);
+    const chips = history.chips || [];
+    const cell = document.getElementById(`chips-${r.entry}`);
+    if (!cell) return;
+    cell.innerHTML = chips.length
+      ? chips.map(c => `<span class="pill vice" title="GW${c.event}">${CHIP_LABELS[c.name] || c.name}</span>`).join(' ')
+      : '<span style="color:var(--text-faint);font-family:var(--font-mono);font-size:10px">none yet</span>';
+  } catch (err) {
+    const cell = document.getElementById(`chips-${r.entry}`);
+    if (cell) cell.innerHTML = '<span style="color:var(--text-faint);font-family:var(--font-mono);font-size:10px">-</span>';
+    console.error(`Chip lookup failed for entry ${r.entry}:`, err);
+  }
+}
+
 async function loadChipsInBackground(entries) {
-  for (const r of entries) {
-    try {
-      const history = await fetchProxied(`/entry/${r.entry}/history/`);
-      const chips = history.chips || [];
-      const cell = document.getElementById(`chips-${r.entry}`);
-      if (!cell) continue;
-      cell.innerHTML = chips.length
-        ? chips.map(c => `<span class="pill vice" title="GW${c.event}">${CHIP_LABELS[c.name] || c.name}</span>`).join(' ')
-        : '<span style="color:var(--text-faint);font-family:var(--font-mono);font-size:10px">none yet</span>';
-    } catch (err) {
-      const cell = document.getElementById(`chips-${r.entry}`);
-      if (cell) cell.innerHTML = '<span style="color:var(--text-faint);font-family:var(--font-mono);font-size:10px">-</span>';
-      console.error(`Chip lookup failed for entry ${r.entry}:`, err);
+  // Small worker pool instead of one lookup at a time - keeps a polite cap
+  // on concurrent requests to the Worker/FPL API while not making the user
+  // wait for up to MAX_CHIP_LOOKUPS fully sequential round-trips.
+  const queue = [...entries];
+  async function worker() {
+    let next;
+    while ((next = queue.shift())) {
+      await loadOneChipCell(next);
     }
   }
+  await Promise.all(Array.from({ length: CHIP_LOOKUP_CONCURRENCY }, worker));
 
   // Anything beyond the cap just shows a dash rather than spinning forever
   const capped = LEAGUE_ENTRIES.slice(MAX_CHIP_LOOKUPS);
@@ -220,7 +206,7 @@ async function loadRivalSquad(entryId) {
       </tr>`).join('');
 
     container.innerHTML = `
-      <div class="section-heading">${entry.name} - Starting XI</div>
+      <div class="section-heading">${escapeHtml(entry.name)} - Starting XI</div>
       <table class="squad-table">
         <thead><tr><th>Player</th><th>Team</th><th>Pos</th><th>Price</th><th>Signal</th></tr></thead>
         <tbody>${rows(starters)}</tbody>

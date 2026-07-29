@@ -5,11 +5,7 @@
 // only transfer made, not a combined multi-transfer plan.
 // ============================================================
 
-const WORKER_BASE = 'https://fpl-proxy.neilstuart87.workers.dev/';
-
 const STORAGE_KEY = 'fplCompanionTeamId'; // shared across pages on purpose
-const SIGNALS_URL = 'data/latest/signals.json';
-const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/110x140/${code}.png`;
 
 const MAX_PER_CLUB = 3;
 
@@ -22,10 +18,11 @@ let META = null;
 let CURRENT_SQUAD = []; // enriched squad players, set after a successful load
 let CURRENT_BANK = 0;
 
+const setStatus = makeStatusSetter('transfers-status');
+
 async function boot() {
   try {
-    const res = await fetch(SIGNALS_URL, { cache: 'no-store' });
-    const data = await res.json();
+    const data = await loadSignals();
     META = data.meta;
     ALL_PLAYERS = data.players;
     document.getElementById('meta-pill').textContent =
@@ -35,41 +32,14 @@ async function boot() {
     console.error(err);
   }
 
-  const savedId = localStorage.getItem(STORAGE_KEY);
-  if (savedId) {
-    document.getElementById('team-id-input').value = savedId;
-    loadTeam(savedId);
-  }
-
-  document.getElementById('team-id-submit').addEventListener('click', () => {
-    const id = document.getElementById('team-id-input').value.trim();
-    if (!/^\d+$/.test(id)) {
-      setStatus('Please enter a numeric Team ID.', true);
-      return;
-    }
-    localStorage.setItem(STORAGE_KEY, id);
-    loadTeam(id);
+  wireIdInput({
+    inputId: 'team-id-input',
+    submitId: 'team-id-submit',
+    storageKey: STORAGE_KEY,
+    setStatus,
+    onSubmit: loadTeam,
+    invalidMsg: 'Please enter a numeric Team ID.',
   });
-
-  document.getElementById('team-id-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('team-id-submit').click();
-  });
-}
-
-function setStatus(msg, isError = false) {
-  const el = document.getElementById('transfers-status');
-  el.textContent = msg;
-  el.style.color = isError ? 'var(--tough)' : 'var(--text-faint)';
-}
-
-async function fetchProxied(path) {
-  const base = WORKER_BASE.replace(/\/+$/, '');
-  const res = await fetch(base + path);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`HTTP ${res.status} for ${path}${body ? ' - ' + body.slice(0, 150) : ''}`);
-  }
-  return res.json();
 }
 
 async function loadTeam(teamId) {

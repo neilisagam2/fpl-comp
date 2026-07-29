@@ -3,9 +3,6 @@
 // Reads data/latest/signals.json, no other network calls needed.
 // ============================================================
 
-const SIGNALS_URL = 'data/latest/signals.json';
-const PHOTO_URL = code => `https://resources.premierleague.com/premierleague25/photos/players/110x140/${code}.png`;
-
 const COMPARE_COLORS = ['#e8a33d', '#49a7c4', '#c4544a']; // signal, data, tough - matches token palette
 const MAX_COMPARE = 3;
 
@@ -27,8 +24,7 @@ const filters = {
 
 async function boot() {
   try {
-    const res = await fetch(SIGNALS_URL, { cache: 'no-store' });
-    const data = await res.json();
+    const data = await loadSignals();
     ALL_PLAYERS = data.players;
     TEAMS = data.teams;
     document.getElementById('meta-pill').textContent =
