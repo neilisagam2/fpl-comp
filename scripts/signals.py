@@ -206,12 +206,31 @@ PER90_METRICS = {
 }
 # gc_p90 (goal contributions) = goals + assists, handled separately
 
+# Real FPL Defensive Contribution scoring is a per-match THRESHOLD bonus,
+# not a continuous per-action reward: defenders earn a flat +2 points for
+# hitting 10+ CBIT actions in a match, midfielders/forwards for 12+ CBIRT -
+# and it's capped at +2 regardless of how far past the threshold a player
+# goes. A raw "actions per 90" rate has no such ceiling, so without
+# capping it here, a defender averaging 20 actions/90 would be ranked far
+# above one averaging 11/90 despite both being worth an identical 2 points
+# per match in reality. This caps the per-90 rate at the real threshold
+# before it's used, so excess volume beyond what FPL actually pays for
+# stops being over-rewarded. It's still an approximation (season-average
+# per-90 can't distinguish "reliably clears 10-11 every match" from
+# "wildly alternates between 20 and 2, same average" - that needs
+# match-by-match data this pipeline doesn't currently pull), but it fixes
+# the more clear-cut problem: rewarding volume the scoring system doesn't.
+DEFCON_MATCH_THRESHOLD = {1: None, 2: 10.0, 3: 12.0, 4: 12.0}
 
-def raw_per90(stats: dict, field: str) -> float:
+
+def raw_per90(stats: dict, field: str, cap: float | None = None) -> float:
     mins = stats["minutes"]
     if mins <= 0:
         return 0.0
-    return stats[field] * 90.0 / mins
+    value = stats[field] * 90.0 / mins
+    if cap is not None:
+        value = min(value, cap)
+    return value
 
 
 def compute_per90_with_shrinkage(players: list[dict]) -> None:
@@ -223,13 +242,19 @@ def compute_per90_with_shrinkage(players: list[dict]) -> None:
         if not pool:
             continue
 
+        defcon_cap = DEFCON_MATCH_THRESHOLD.get(pos_id)
+
+        def per90_for(stats: dict, metric: str, field: str) -> float:
+            cap = defcon_cap if metric == "defcon_p90" else None
+            return raw_per90(stats, field, cap=cap)
+
         # Positional averages from well-sampled players only
         anchors = [p for p in pool if p["stats"]["minutes"] >= SHRINKAGE_MINUTES]
         ref = anchors if anchors else pool
 
         pos_avg = {}
         for metric, field in PER90_METRICS.items():
-            vals = [raw_per90(p["stats"], field) for p in ref]
+            vals = [per90_for(p["stats"], metric, field) for p in ref]
             pos_avg[metric] = sum(vals) / len(vals)
         gc_vals = [
             raw_per90(p["stats"], "goals_scored") + raw_per90(p["stats"], "assists")
@@ -242,7 +267,7 @@ def compute_per90_with_shrinkage(players: list[dict]) -> None:
             w = min(mins / SHRINKAGE_MINUTES, 1.0)
             metrics = {}
             for metric, field in PER90_METRICS.items():
-                metrics[metric] = w * raw_per90(p["stats"], field) + (1 - w) * pos_avg[metric]
+                metrics[metric] = w * per90_for(p["stats"], metric, field) + (1 - w) * pos_avg[metric]
             gc = raw_per90(p["stats"], "goals_scored") + raw_per90(p["stats"], "assists")
             metrics["gc_p90"] = w * gc + (1 - w) * pos_avg["gc_p90"]
             p["metrics"] = metrics
