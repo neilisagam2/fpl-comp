@@ -33,6 +33,7 @@ Output: data/latest/signals.json
 """
 
 import json
+import math
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -209,28 +210,45 @@ PER90_METRICS = {
 # Real FPL Defensive Contribution scoring is a per-match THRESHOLD bonus,
 # not a continuous per-action reward: defenders earn a flat +2 points for
 # hitting 10+ CBIT actions in a match, midfielders/forwards for 12+ CBIRT -
-# and it's capped at +2 regardless of how far past the threshold a player
-# goes. A raw "actions per 90" rate has no such ceiling, so without
-# capping it here, a defender averaging 20 actions/90 would be ranked far
-# above one averaging 11/90 despite both being worth an identical 2 points
-# per match in reality. This caps the per-90 rate at the real threshold
-# before it's used, so excess volume beyond what FPL actually pays for
-# stops being over-rewarded. It's still an approximation (season-average
-# per-90 can't distinguish "reliably clears 10-11 every match" from
-# "wildly alternates between 20 and 2, same average" - that needs
-# match-by-match data this pipeline doesn't currently pull), but it fixes
-# the more clear-cut problem: rewarding volume the scoring system doesn't.
-DEFCON_MATCH_THRESHOLD = {1: None, 2: 10.0, 3: 12.0, 4: 12.0}
+# capped at +2 regardless of how far past the threshold a player goes.
+#
+# A season-average "actions per 90" rate doesn't map cleanly onto that: a
+# player averaging exactly the threshold does NOT clear it every match -
+# by Poisson variance around that mean, they clear it roughly half the
+# time. So rather than just capping the rate at the threshold (which stops
+# rewarding excess volume but still treats "averages 11/90" and "averages
+# 20/90" as similarly reliable), this computes the actual probability of
+# clearing the threshold in a given match: P(X >= threshold) where
+# X ~ Poisson(season-average rate). This needs only the season-aggregate
+# rate we already have - no match-by-match data required - and correctly
+# captures that a player sitting just under the threshold on average still
+# earns the bonus a meaningful fraction of the time, while someone racking
+# up huge excess volume gets a probability approaching (but never
+# exceeding) 1, matching the real payout ceiling.
+DEFCON_MATCH_THRESHOLD = {1: None, 2: 10, 3: 12, 4: 12}
 
 
-def raw_per90(stats: dict, field: str, cap: float | None = None) -> float:
+def poisson_sf(k: int, lam: float) -> float:
+    """P(X >= k) for X ~ Poisson(lam). Computed directly (not via a
+    library) since defensive-contribution rates are small enough (roughly
+    0-25 actions/90) that this is numerically well-behaved without
+    log-space tricks. Verified against scipy.stats.poisson.sf."""
+    if lam <= 0:
+        return 0.0
+    cdf = 0.0
+    term = math.exp(-lam)
+    cdf += term
+    for i in range(1, k):
+        term *= lam / i
+        cdf += term
+    return max(0.0, min(1.0, 1.0 - cdf))
+
+
+def raw_per90(stats: dict, field: str) -> float:
     mins = stats["minutes"]
     if mins <= 0:
         return 0.0
-    value = stats[field] * 90.0 / mins
-    if cap is not None:
-        value = min(value, cap)
-    return value
+    return stats[field] * 90.0 / mins
 
 
 def compute_per90_with_shrinkage(players: list[dict]) -> None:
@@ -242,11 +260,13 @@ def compute_per90_with_shrinkage(players: list[dict]) -> None:
         if not pool:
             continue
 
-        defcon_cap = DEFCON_MATCH_THRESHOLD.get(pos_id)
+        defcon_threshold = DEFCON_MATCH_THRESHOLD.get(pos_id)
 
         def per90_for(stats: dict, metric: str, field: str) -> float:
-            cap = defcon_cap if metric == "defcon_p90" else None
-            return raw_per90(stats, field, cap=cap)
+            rate = raw_per90(stats, field)
+            if metric == "defcon_p90" and defcon_threshold is not None:
+                return poisson_sf(defcon_threshold, rate)
+            return rate
 
         # Positional averages from well-sampled players only
         anchors = [p for p in pool if p["stats"]["minutes"] >= SHRINKAGE_MINUTES]
